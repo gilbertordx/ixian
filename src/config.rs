@@ -223,7 +223,7 @@ dir = {logbook}
   name = "Run the app (live reload)"
   kind = "service"
   cwd = "rust/web"
-  before = ["rustup target add wasm32-unknown-unknown"]
+  before = [{{ unless = "{trunk}", run = "cargo install trunk --locked" }}, "rustup target add wasm32-unknown-unknown"]
   run = "trunk serve"
   url = "http://127.0.0.1:8080"
 
@@ -334,6 +334,7 @@ dir = {launchpad}
         rhcp = lit(&dir("rhcp-chatbot")),
         portfolio = lit(&dir("gilbertordx.github.io")),
         launchpad = lit(&dir("launchpad")),
+        trunk = if cfg!(windows) { "~/.cargo/bin/trunk.exe" } else { "~/.cargo/bin/trunk" },
         update = if cfg!(windows) {
             "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update.ps1"
         } else {

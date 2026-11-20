@@ -49,6 +49,9 @@ foreach ($name in "tbjp-oracle","logbook","rhcp-chatbot","gilbertordx.github.io"
     if ($LASTEXITCODE -ne 0) { Write-Host "could not clone $name (private repo? sign in to GitHub when asked) - continuing" -ForegroundColor Yellow }
 }
 
+Step "4b/6  trunk (builds logbook's web UI; a long compile the first time)"
+if (-not (Have trunk)) { cargo install trunk --locked }
+
 Step "5/6  Build and install Launchpad (a few minutes)"
 Push-Location $here
 cargo install --path . --locked --force
@@ -64,4 +67,4 @@ launchpad --reset-config
 launchpad --check
 
 Write-Host "`nDone. Double-click Launchpad on your Desktop, or type: launchpad" -ForegroundColor Green
-Write-Host "Optional, for Logbook's web UI:  cargo install trunk --locked   (long build)"
+
