@@ -8,7 +8,7 @@ cargo install --path .     # installs the `launchpad` command
 launchpad                  # run it
 ```
 
-**Windows, one step:** double-click `setup-windows.bat`. It installs Git, the C++ build tools and Rust if missing, clones your three projects to `%USERPROFILE%\projects`, builds Launchpad and puts the icon on your Desktop.
+**Windows, one step:** double-click `setup-windows.bat`. It installs Git, the C++ build tools and Rust if missing, clones your four projects to `%USERPROFILE%\projects`, builds Launchpad and puts the icon on your Desktop.
 
 ## Using it
 
@@ -28,7 +28,7 @@ Mouse: click to select, click again to run.
 ## Your projects
 
 They live in a plain text file (`launchpad --print-config-path` shows where; created with
-TBJP Oracle, Logbook and RHCP Chatbot on first run). `launchpad --check` reports which folders
+tbjp-oracle, logbook, rhcp-chatbot and gilbertordx.github.io on first run; `launchpad --reset-config` rewrites it with the current defaults and keeps your old one as a .bak). `launchpad --check` reports which folders
 were found. Edit the `dir` paths to match your machine. Action kinds:
 `service` (start, wait for the port, open `url`), `task` (run, show output), `terminal`
 (hand over the terminal, e.g. a chat) and `open` (open a folder or file).

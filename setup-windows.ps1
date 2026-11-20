@@ -41,7 +41,7 @@ cargo --version
 Step "4/6  Your projects (cloned to $HOME\projects)"
 $projects = Join-Path $HOME "projects"
 New-Item -ItemType Directory -Force $projects | Out-Null
-foreach ($name in "tbjp-oracle","logbook","rhcp-chatbot") {
+foreach ($name in "tbjp-oracle","logbook","rhcp-chatbot","gilbertordx.github.io") {
     $dest = Join-Path $projects $name
     if (Test-Path $dest) { Write-Host "$name already there - updating"; git -C $dest pull --ff-only; continue }
 
@@ -60,6 +60,7 @@ Step "6/6  Desktop icon"
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $here "shortcut\create-desktop-shortcut.ps1")
 
 Step "Check"
+launchpad --reset-config
 launchpad --check
 
 Write-Host "`nDone. Double-click Launchpad on your Desktop, or type: launchpad" -ForegroundColor Green

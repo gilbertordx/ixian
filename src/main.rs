@@ -39,6 +39,9 @@ struct Cli {
     /// Print where the project list is stored and whether each project folder was found, then exit.
     #[arg(long)]
     check: bool,
+    /// Replace the project list with the current defaults (your old one is saved as projects.toml.bak).
+    #[arg(long)]
+    reset_config: bool,
     /// Print the path of the project list and exit.
     #[arg(long)]
     print_config_path: bool,
@@ -166,6 +169,13 @@ fn main() -> Result<()> {
     if cli.print_config_path {
         println!("{}", path.display());
         return Ok(());
+    }
+    if cli.reset_config {
+        match config::reset_config(&path)? {
+            Some(b) => println!("Old project list saved as {}", b.display()),
+            None => println!("No old project list to save."),
+        }
+        println!("Fresh project list written to {}", path.display());
     }
     let created =
         config::ensure_config(&path).with_context(|| format!("creating {}", path.display()))?;

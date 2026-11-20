@@ -185,7 +185,7 @@ pub fn default_config_text(discover: &dyn Fn(&str) -> Option<PathBuf>) -> String
 # Kinds: service (keeps running, opens `url`), task (runs and finishes), terminal (interactive), open.
 
 [[projects]]
-name = "TBJP Oracle"
+name = "tbjp-oracle"
 description = "Forum archive search (Rust remaster)"
 dir = {tbjp}
 
@@ -215,7 +215,7 @@ dir = {tbjp}
   run = "docs/RUST_LEARNING.md"
 
 [[projects]]
-name = "Logbook"
+name = "logbook"
 description = "Workout log (Rust / WebAssembly remaster)"
 dir = {logbook}
 
@@ -242,7 +242,7 @@ dir = {logbook}
   run = "docs/RUST_LEARNING.md"
 
 [[projects]]
-name = "RHCP Chatbot"
+name = "rhcp-chatbot"
 description = "Trivia chatbot (Rust remaster)"
 dir = {rhcp}
 
@@ -280,12 +280,82 @@ dir = {rhcp}
   name = "Read the learning guide"
   kind = "open"
   run = "docs/RUST_LEARNING.md"
+
+[[projects]]
+name = "gilbertordx.github.io"
+description = "Portfolio and log (Rust static site)"
+dir = {portfolio}
+
+  [[projects.actions]]
+  name = "Open the portfolio"
+  kind = "service"
+  run = "cargo run --release -- serve"
+  url = "http://127.0.0.1:4321"
+
+  [[projects.actions]]
+  name = "Build the site (./dist)"
+  run = "cargo run --release"
+
+  [[projects.actions]]
+  name = "Open the project folder"
+  kind = "open"
+  run = "."
+
+  [[projects.actions]]
+  name = "Open the live site"
+  kind = "open"
+  run = "https://gilbertordx.github.io"
+
+[[projects]]
+name = "launchpad"
+description = "This menu (Rust terminal app)"
+dir = {launchpad}
+
+  [[projects.actions]]
+  name = "Update Launchpad + desktop icon"
+  run = "{update}"
+
+  [[projects.actions]]
+  name = "Run the tests"
+  run = "cargo test --release"
+
+  [[projects.actions]]
+  name = "Edit the project list"
+  kind = "open"
+  run = {config}
+
+  [[projects.actions]]
+  name = "Open the project folder"
+  kind = "open"
+  run = "."
 "#,
         tbjp = lit(&dir("tbjp-oracle")),
         logbook = lit(&dir("logbook")),
         rhcp = lit(&dir("rhcp-chatbot")),
+        portfolio = lit(&dir("gilbertordx.github.io")),
+        launchpad = lit(&dir("launchpad")),
+        update = if cfg!(windows) {
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update.ps1"
+        } else {
+            "bash scripts/update.sh"
+        },
+        config = lit(&default_config_path().display().to_string()),
         cargo = cargo,
     )
+}
+
+/// Back up the current project list (if any) and write a fresh default one.
+pub fn reset_config(path: &Path) -> Result<Option<PathBuf>> {
+    let backup = if path.exists() {
+        let b = path.with_extension("toml.bak");
+        std::fs::copy(path, &b)?;
+        std::fs::remove_file(path)?;
+        Some(b)
+    } else {
+        None
+    };
+    ensure_config(path)?;
+    Ok(backup)
 }
 
 /// Create the config file the first time (never overwrites an existing one).
@@ -309,7 +379,7 @@ mod tests {
         let text = default_config_text(&|_| None);
         let cfg: Config = toml::from_str(&text).expect("default config parses");
         let names: Vec<&str> = cfg.projects.iter().map(|p| p.name.as_str()).collect();
-        assert_eq!(names, ["TBJP Oracle", "Logbook", "RHCP Chatbot"]);
+        assert_eq!(names, ["tbjp-oracle", "logbook", "rhcp-chatbot", "gilbertordx.github.io", "launchpad"]);
         assert!(
             cfg.projects.iter().all(|p| p.dir.is_empty()),
             "nothing was discovered, so dirs are empty"
