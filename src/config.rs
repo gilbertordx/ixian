@@ -205,6 +205,10 @@ dir = {tbjp}
   run = "{cargo} ingest"
 
   [[projects.actions]]
+  name = "Update from GitHub (git pull)"
+  run = "git pull --ff-only"
+
+  [[projects.actions]]
   name = "Open the project folder"
   kind = "open"
   run = "."
@@ -230,6 +234,10 @@ dir = {logbook}
   [[projects.actions]]
   name = "Run the tests"
   run = "cargo test --workspace --manifest-path rust/Cargo.toml"
+
+  [[projects.actions]]
+  name = "Update from GitHub (git pull)"
+  run = "git pull --ff-only"
 
   [[projects.actions]]
   name = "Open the project folder"
@@ -272,6 +280,10 @@ dir = {rhcp}
   run = "cargo test --release --manifest-path rust/Cargo.toml"
 
   [[projects.actions]]
+  name = "Update from GitHub (git pull)"
+  run = "git pull --ff-only"
+
+  [[projects.actions]]
   name = "Open the project folder"
   kind = "open"
   run = "."
@@ -295,6 +307,10 @@ dir = {portfolio}
   [[projects.actions]]
   name = "Build the site (./dist)"
   run = "cargo run --release"
+
+  [[projects.actions]]
+  name = "Update from GitHub (git pull)"
+  run = "git pull --ff-only"
 
   [[projects.actions]]
   name = "Open the project folder"
