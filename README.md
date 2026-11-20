@@ -8,6 +8,8 @@ cargo install --path .     # installs the `launchpad` command
 launchpad                  # run it
 ```
 
+**Windows, one step:** double-click `setup-windows.bat`. It installs Git, the C++ build tools and Rust if missing, clones your three projects to `%USERPROFILE%\projects`, builds Launchpad and puts the icon on your Desktop.
+
 ## Using it
 
 | Key | Does |
