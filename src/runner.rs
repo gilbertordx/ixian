@@ -435,6 +435,7 @@ mod tests {
             before: vec![],
             env: Default::default(),
             wait_secs: 20,
+            stop_services: false,
         }
     }
 

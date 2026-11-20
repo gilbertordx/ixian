@@ -88,6 +88,9 @@ pub struct Action {
     /// For services: how long to wait for `url` (a first build can take minutes).
     #[serde(default = "default_wait")]
     pub wait_secs: u64,
+    /// Stop this project's running apps first (used by "Update from GitHub").
+    #[serde(default)]
+    pub stop_services: bool,
 }
 
 /// `~` and `~/x` -> the home folder.
@@ -207,6 +210,7 @@ dir = {tbjp}
   [[projects.actions]]
   name = "Update from GitHub (git pull)"
   run = "git pull --ff-only"
+  stop_services = true
 
   [[projects.actions]]
   name = "Open the project folder"
@@ -238,6 +242,7 @@ dir = {logbook}
   [[projects.actions]]
   name = "Update from GitHub (git pull)"
   run = "git pull --ff-only"
+  stop_services = true
 
   [[projects.actions]]
   name = "Open the project folder"
@@ -282,6 +287,7 @@ dir = {rhcp}
   [[projects.actions]]
   name = "Update from GitHub (git pull)"
   run = "git pull --ff-only"
+  stop_services = true
 
   [[projects.actions]]
   name = "Open the project folder"
@@ -311,6 +317,7 @@ dir = {portfolio}
   [[projects.actions]]
   name = "Update from GitHub (git pull)"
   run = "git pull --ff-only"
+  stop_services = true
 
   [[projects.actions]]
   name = "Open the project folder"

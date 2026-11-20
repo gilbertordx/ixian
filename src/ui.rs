@@ -3,16 +3,25 @@
 use std::time::Duration;
 
 use ratatui::Frame;
-use ratatui::layout::{Constraint, Layout};
+use ratatui::layout::{Alignment, Constraint, Layout};
 use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, List, ListItem, Paragraph};
+use ratatui::widgets::{Block, BorderType, List, ListItem, Paragraph};
 
 use crate::app::{App, Focus};
 use crate::config::Kind;
 use crate::runner::Status;
 
 const SPINNER: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+// A Kali-ish palette (24-bit colour; Windows Terminal and most terminals support it).
+const BLUE: Color = Color::Rgb(59, 142, 234);
+const GREEN: Color = Color::Rgb(63, 185, 80);
+const YELLOW: Color = Color::Rgb(227, 179, 65);
+const RED: Color = Color::Rgb(248, 81, 73);
+const DIM: Color = Color::Rgb(110, 118, 129);
+const TEXT: Color = Color::Rgb(201, 209, 217);
+const SEL_DIM: Color = Color::Rgb(33, 38, 45);
 
 fn kind_label(kind: Kind) -> &'static str {
     match kind {
@@ -23,27 +32,90 @@ fn kind_label(kind: Kind) -> &'static str {
     }
 }
 
+fn kind_color(kind: Kind) -> Color {
+    match kind {
+        Kind::Service => BLUE,
+        Kind::Task => YELLOW,
+        Kind::Terminal => GREEN,
+        Kind::Open => DIM,
+    }
+}
+
 /// The coloured badge after an action's name.
 fn status_span(status: Option<&Status>, tick: usize) -> Span<'static> {
     let spin = SPINNER[tick % SPINNER.len()];
     match status {
         None => Span::raw(""),
-        Some(Status::Preparing(_)) => Span::styled(
-            format!("{spin} preparing..."),
-            Style::new().fg(Color::Yellow),
-        ),
-        Some(Status::Starting) => Span::styled(
-            format!("{spin} starting..."),
-            Style::new().fg(Color::Yellow),
-        ),
-        Some(Status::Running(Some(url))) => {
-            Span::styled(format!("● running  {url}"), Style::new().fg(Color::Green))
+        Some(Status::Preparing(_)) => {
+            Span::styled(format!("{spin} preparing..."), Style::new().fg(YELLOW))
         }
-        Some(Status::Running(None)) => Span::styled("● running", Style::new().fg(Color::Green)),
-        Some(Status::Done) => Span::styled("✔ done", Style::new().fg(Color::Green)),
-        Some(Status::Failed(m)) => Span::styled(format!("✖ {m}"), Style::new().fg(Color::Red)),
-        Some(Status::Stopped) => Span::styled("■ stopped", Style::new().fg(Color::DarkGray)),
+        Some(Status::Starting) => {
+            Span::styled(format!("{spin} starting..."), Style::new().fg(YELLOW))
+        }
+        Some(Status::Running(Some(url))) => Span::styled(
+            format!("● running  {url}"),
+            Style::new().fg(GREEN).add_modifier(Modifier::BOLD),
+        ),
+        Some(Status::Running(None)) => Span::styled(
+            "● running",
+            Style::new().fg(GREEN).add_modifier(Modifier::BOLD),
+        ),
+        Some(Status::Done) => Span::styled("✔ done", Style::new().fg(GREEN)),
+        Some(Status::Failed(m)) => Span::styled(format!("✖ {m}"), Style::new().fg(RED)),
+        Some(Status::Stopped) => Span::styled("■ stopped", Style::new().fg(DIM)),
     }
+}
+
+/// One line of program output, coloured by what it looks like.
+fn log_line(text: &str) -> Line<'static> {
+    let lower = text.to_lowercase();
+    let style = if text.starts_with("$ ") {
+        Style::new().fg(BLUE).add_modifier(Modifier::BOLD)
+    } else if lower.starts_with("error") || lower.contains("error:") || lower.contains("panicked") {
+        Style::new().fg(RED)
+    } else if lower.contains("warning") {
+        Style::new().fg(YELLOW)
+    } else if text.trim_start().starts_with("Compiling")
+        || text.trim_start().starts_with("Running")
+        || text.trim_start().starts_with("Downloading")
+    {
+        Style::new().fg(DIM)
+    } else if text.trim_start().starts_with("Finished") || lower.contains("listening") {
+        Style::new().fg(GREEN)
+    } else {
+        Style::new().fg(TEXT)
+    };
+    Line::styled(text.to_string(), style)
+}
+
+/// `key label   key label ...` with the keys highlighted. The text reads the same as plain hints.
+fn hints() -> Line<'static> {
+    let pairs = [
+        ("↑↓", "move"),
+        ("Enter", "run"),
+        ("→", "actions"),
+        ("1-9", "run"),
+        ("s", "stop"),
+        ("o", "open again"),
+        ("e", "edit list"),
+        ("q", "quit"),
+    ];
+    let mut spans = vec![Span::raw(" ")];
+    for (i, (k, label)) in pairs.iter().enumerate() {
+        if i > 0 {
+            spans.push(Span::raw("   "));
+        }
+        spans.push(Span::styled(
+            (*k).to_string(),
+            Style::new().fg(BLUE).add_modifier(Modifier::BOLD),
+        ));
+        spans.push(Span::styled(format!(" {label}"), Style::new().fg(DIM)));
+    }
+    spans.push(Span::styled(
+        "   (mouse: click, click again to run)",
+        Style::new().fg(DIM),
+    ));
+    Line::from(spans)
 }
 
 pub fn render(f: &mut Frame, app: &mut App) {
@@ -61,13 +133,28 @@ pub fn render(f: &mut Frame, app: &mut App) {
         Paragraph::new(Line::from(vec![
             Span::styled(
                 " LAUNCHPAD ",
-                Style::new().bold().fg(Color::White).bg(Color::Blue),
+                Style::new().bold().fg(Color::Black).bg(BLUE),
             ),
-            Span::styled(
-                "  pick a project, press Enter, it opens",
-                Style::new().fg(Color::Gray),
-            ),
+            Span::styled("  pick a project, press Enter, it opens", Style::new().fg(DIM)),
         ])),
+        header,
+    );
+    let running = app.runner.running_count();
+    let total = app.config.projects.len();
+    f.render_widget(
+        Paragraph::new(Line::from(vec![
+            Span::styled(format!("{total} projects"), Style::new().fg(DIM)),
+            Span::styled("  ·  ", Style::new().fg(DIM)),
+            if running > 0 {
+                Span::styled(
+                    format!("● {running} running "),
+                    Style::new().fg(GREEN).add_modifier(Modifier::BOLD),
+                )
+            } else {
+                Span::styled("nothing running ", Style::new().fg(DIM))
+            },
+        ]))
+        .alignment(Alignment::Right),
         header,
     );
 
@@ -75,30 +162,36 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let selected_style = |focused: bool| {
         if focused {
             Style::new()
-                .bg(Color::Cyan)
+                .bg(BLUE)
                 .fg(Color::Black)
                 .add_modifier(Modifier::BOLD)
         } else {
-            Style::new().bg(Color::DarkGray).fg(Color::White)
+            Style::new().bg(SEL_DIM).fg(Color::White)
         }
     };
     let border = |focused: bool| {
         if focused {
-            Style::new().fg(Color::Cyan)
+            Style::new().fg(BLUE)
         } else {
-            Style::new().fg(Color::DarkGray)
+            Style::new().fg(SEL_DIM)
+        }
+    };
+    let title_style = |focused: bool| {
+        if focused {
+            Style::new().fg(BLUE).add_modifier(Modifier::BOLD)
+        } else {
+            Style::new().fg(DIM)
         }
     };
 
     // ---------------------------------------------------------------- projects
     let block = Block::bordered()
-        .title(" Projects ")
+        .border_type(BorderType::Rounded)
+        .title(Span::styled(" Projects ", title_style(focus_projects)))
         .border_style(border(focus_projects));
     app.areas.projects = block.inner(left);
     let items: Vec<ListItem> = if app.config.projects.is_empty() {
-        vec![ListItem::new(Line::from(
-            "no projects yet - press e".fg(Color::Yellow),
-        ))]
+        vec![ListItem::new(Line::from("no projects yet - press e".fg(YELLOW)))]
     } else {
         app.config
             .projects
@@ -107,14 +200,14 @@ pub fn render(f: &mut Frame, app: &mut App) {
             .map(|(i, p)| {
                 let mut spans = vec![
                     if app.project_active(i) {
-                        "● ".fg(Color::Green)
+                        Span::styled("● ", Style::new().fg(GREEN))
                     } else {
                         "  ".into()
                     },
-                    Span::raw(p.name.clone()),
+                    Span::styled(p.name.clone(), Style::new().fg(TEXT)),
                 ];
                 if p.dir_path().is_none() {
-                    spans.push(" ⚠".fg(Color::Yellow));
+                    spans.push(" ⚠".fg(YELLOW));
                 }
                 ListItem::new(Line::from(spans))
             })
@@ -131,7 +224,8 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     // ---------------------------------------------------------------- selected project
     let right_block = Block::bordered()
-        .title(" Actions ")
+        .border_type(BorderType::Rounded)
+        .title(Span::styled(" Actions ", title_style(!focus_projects)))
         .border_style(border(!focus_projects));
     let right_inner = right_block.inner(right);
     f.render_widget(right_block, right);
@@ -143,21 +237,29 @@ pub fn render(f: &mut Frame, app: &mut App) {
     if let Some(project) = app.config.projects.get(sel) {
         let folder_line = match project.dir_path() {
             Some(p) => Line::from(vec![
-                "folder  ".fg(Color::DarkGray),
-                Span::raw(p.display().to_string()),
+                "folder  ".fg(DIM),
+                Span::styled(p.display().to_string(), Style::new().fg(TEXT)),
             ]),
             None => Line::from(
-                "⚠ folder not set or not found - press e to edit the config".fg(Color::Yellow),
+                "⚠ folder not set or not found - press e to edit the config".fg(YELLOW),
             ),
         };
         f.render_widget(
             Paragraph::new(vec![
-                Line::from(project.name.clone().bold()),
-                Line::from(project.description.clone().fg(Color::Gray)),
+                Line::from(project.name.clone().fg(BLUE).bold()),
+                Line::from(project.description.clone().fg(DIM)),
                 folder_line,
             ]),
             info,
         );
+        let name_w = project
+            .actions
+            .iter()
+            .map(|a| a.name.chars().count())
+            .max()
+            .unwrap_or(0)
+            .max(24)
+            + 2;
         let items: Vec<ListItem> = project
             .actions
             .iter()
@@ -165,11 +267,11 @@ pub fn render(f: &mut Frame, app: &mut App) {
             .map(|(i, a)| {
                 let status = app.status_of((sel, i));
                 ListItem::new(Line::from(vec![
-                    Span::styled(format!("{} ", i + 1), Style::new().fg(Color::DarkGray)),
-                    Span::raw(format!("{:<26}", a.name)),
+                    Span::styled(format!("{} ", i + 1), Style::new().fg(DIM)),
+                    Span::styled(format!("{:<name_w$}", a.name), Style::new().fg(TEXT)),
                     Span::styled(
                         format!("{:<9}", kind_label(a.kind)),
-                        Style::new().fg(Color::DarkGray),
+                        Style::new().fg(kind_color(a.kind)),
                     ),
                     status_span(status, app.tick),
                 ]))
@@ -194,31 +296,27 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .map(|a| format!(" Output - {} ", a.name))
         .unwrap_or_else(|| " Output ".into());
     let log_block = Block::bordered()
-        .title(title)
-        .border_style(Style::new().fg(Color::DarkGray));
+        .border_type(BorderType::Rounded)
+        .title(Span::styled(title, Style::new().fg(DIM)))
+        .border_style(Style::new().fg(SEL_DIM));
     let inner = log_block.inner(log_area);
     let lines: Vec<Line> = match app.states.get(&key).filter(|s| !s.log.is_empty()) {
         Some(st) => {
             let skip = st.log.len().saturating_sub(inner.height as usize);
-            st.log
-                .iter()
-                .skip(skip)
-                .map(|l| Line::from(l.clone()))
-                .collect()
+            st.log.iter().skip(skip).map(|l| log_line(l)).collect()
         }
         None => vec![Line::from(
-            "Nothing has run yet. Press Enter to start the first action.".fg(Color::DarkGray),
+            "Nothing has run yet. Press Enter to start the first action.".fg(DIM),
         )],
     };
     f.render_widget(Paragraph::new(lines).block(log_block), log_area);
 
     // ---------------------------------------------------------------- footer
     let footer_line = match &app.flash {
-        Some((text, at)) if at.elapsed() < Duration::from_secs(5) => Line::from(format!(" {text}").fg(Color::Yellow)),
-        _ => Line::from(
-            " ↑↓ move   Enter run   → actions   1-9 run   s stop   o open again   e edit list   q quit   (mouse: click, click again to run)"
-                .fg(Color::DarkGray),
-        ),
+        Some((text, at)) if at.elapsed() < Duration::from_secs(5) => {
+            Line::from(format!(" {text}").fg(YELLOW))
+        }
+        _ => hints(),
     };
     f.render_widget(Paragraph::new(footer_line), footer);
 }
@@ -244,6 +342,7 @@ mod tests {
             before: vec![],
             env: Default::default(),
             wait_secs: 5,
+            stop_services: false,
         };
         let cfg = Config {
             projects: vec![

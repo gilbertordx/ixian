@@ -101,7 +101,7 @@ def check(name, ok, detail=""):
     if not ok: print("\n".join("        | " + l.rstrip() for l in screen.display if l.strip()))
 
 try:
-    check("starts and shows the title, projects and hints", wait_for("LAUNCHPAD") and all(t in text() for t in ["Demo Web", "Second", "NoFolder", "↑↓ move", "Enter run"]))
+    check("starts and shows the title, projects and hints", wait_for("LAUNCHPAD") and wait_for("Enter run") and all(t in text() for t in ["Demo Web", "Second", "NoFolder", "↑↓ move", "Enter run"]))
     check("the first project's actions are listed with numbers", all(t in text() for t in ["1 Serve", "2 Say hi", "3 Fail", "4 Chat", "5 Open folder", "a demo web app"]))
     check("a missing folder is flagged in the list", "NoFolder ⚠" in text())
 

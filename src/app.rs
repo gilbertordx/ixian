@@ -171,6 +171,22 @@ impl App {
             return Effect::None;
         };
 
+        // "Update" actions first stop the project's running apps, so nothing stale keeps serving.
+        if action.stop_services {
+            let stopped = (0..project.actions.len())
+                .filter(|i| self.runner.stop((key.0, *i)))
+                .count();
+            if stopped > 0 {
+                let until = Instant::now() + Duration::from_secs(4);
+                while (0..project.actions.len()).any(|i| self.runner.is_running((key.0, i)))
+                    && Instant::now() < until
+                {
+                    std::thread::sleep(Duration::from_millis(50));
+                }
+                self.flash(format!("stopped {stopped} running app(s) before updating"));
+            }
+        }
+
         // A service that is already up: just open it again.
         if action.kind == Kind::Service && self.runner.is_running(key) {
             return match &action.url {
@@ -415,6 +431,7 @@ mod tests {
             before: vec![],
             env: Default::default(),
             wait_secs: 5,
+            stop_services: false,
         }
     }
 
