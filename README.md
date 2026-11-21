@@ -1,14 +1,14 @@
-# Sietch
+# Ixian
 
 A terminal menu for opening and testing your projects. Pick a project, press Enter, and it starts
 and opens in your browser (or editor, or folder).
 
 ```
-cargo install --path .     # installs the `sietch` command
-sietch                  # run it
+cargo install --path .     # installs the `ixian` command
+ixian                  # run it
 ```
 
-**Windows, one step:** double-click `setup-windows.bat`. It installs Git, the C++ build tools and Rust if missing, clones your four projects to `%USERPROFILE%\projects`, builds Sietch and puts the icon on your Desktop.
+**Windows, one step:** double-click `setup-windows.bat`. It installs Git, the C++ build tools and Rust if missing, clones your four projects to `%USERPROFILE%\projects`, builds Ixian and puts the icon on your Desktop.
 
 ## Using it
 
@@ -27,8 +27,8 @@ Mouse: click to select, click again to run.
 
 ## Your projects
 
-They live in a plain text file (`sietch --print-config-path` shows where; created with
-tbjp-oracle, logbook, rhcp-chatbot and gilbertordx.github.io on first run; `sietch --reset-config` rewrites it with the current defaults and keeps your old one as a .bak). `sietch --check` reports which folders
+They live in a plain text file (`ixian --print-config-path` shows where; created with
+tbjp-oracle, logbook, rhcp-chatbot and gilbertordx.github.io on first run; `ixian --reset-config` rewrites it with the current defaults and keeps your old one as a .bak). `ixian --check` reports which folders
 were found. Edit the `dir` paths to match your machine. Action kinds:
 `service` (start, wait for the port, open `url`), `task` (run, show output), `terminal`
 (hand over the terminal, e.g. a chat) and `open` (open a folder or file).

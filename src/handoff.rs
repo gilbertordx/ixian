@@ -1,5 +1,5 @@
 //! Session handoff notes: the file where every Claude session leaves "what I did, what is left,
-//! what is next". Sietch reads it and shows a briefing when you sit down.
+//! what is next". Ixian reads it and shows a briefing when you sit down.
 //!
 //! The file is append-only Markdown, one entry per session or day:
 //!
@@ -7,7 +7,7 @@
 //! ## 2026-11-21 14:05 · rust-remaster · Rust remaster
 //! Did: rebuilt the launcher in the portfolio palette
 //! Left: confirm the clone fix on Windows
-//! Next: run sietch --reset-config and open the menu
+//! Next: run ixian --reset-config and open the menu
 //! ```
 //!
 //! `Did:`, `Left:` and `Next:` may also be followed by `- bullet` lines.
@@ -150,7 +150,7 @@ Did: restyled the launcher
 Left:
 - confirm the clone fix on Windows
 - delete the zip copy
-Next: run sietch --reset-config
+Next: run ixian --reset-config
 
 ## 2026-11-21 16:30 · logbook · New session
 Did: planned the phone release
@@ -169,7 +169,7 @@ Next: build the PWA manifest
             e[1].left,
             ["confirm the clone fix on Windows", "delete the zip copy"]
         );
-        assert_eq!(e[1].next, ["run sietch --reset-config"]);
+        assert_eq!(e[1].next, ["run ixian --reset-config"]);
     }
 
     #[test]

@@ -459,7 +459,7 @@ mod tests {
 
     #[test]
     fn unless_steps_are_skipped_when_the_file_exists() {
-        let dir = std::env::temp_dir().join(format!("sietch-step-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("ixian-step-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let step = Step::When {
             unless: "made.txt".into(),

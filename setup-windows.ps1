@@ -1,5 +1,5 @@
-# One-shot setup for Windows: installs what's missing, gets your projects, builds Sietch,
-# and puts a Sietch icon on your Desktop. Safe to run again.
+# One-shot setup for Windows: installs what's missing, gets your projects, builds Ixian,
+# and puts a Ixian icon on your Desktop. Safe to run again.
 $ErrorActionPreference = "Stop"
 $here = $PSScriptRoot
 function Step($t) { Write-Host "`n=== $t ===" -ForegroundColor Cyan }
@@ -52,19 +52,19 @@ foreach ($name in "tbjp-oracle","logbook","rhcp-chatbot","gilbertordx.github.io"
 Step "4b/6  trunk (builds logbook's web UI; a long compile the first time)"
 if (-not (Have trunk)) { cargo install trunk --locked }
 
-Step "5/6  Build and install Sietch (a few minutes)"
+Step "5/6  Build and install Ixian (a few minutes)"
 Push-Location $here
 cargo install --path . --locked --force
 Pop-Location
 RefreshPath
-if (-not (Have sietch)) { throw "sietch did not install - scroll up for the error." }
+if (-not (Have ixian)) { throw "ixian did not install - scroll up for the error." }
 
 Step "6/6  Desktop icon"
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $here "shortcut\create-desktop-shortcut.ps1")
 
 Step "Check"
-sietch --reset-config
-sietch --check
+ixian --reset-config
+ixian --check
 
-Write-Host "`nDone. Double-click Sietch on your Desktop, or type: sietch" -ForegroundColor Green
+Write-Host "`nDone. Double-click Ixian on your Desktop, or type: ixian" -ForegroundColor Green
 

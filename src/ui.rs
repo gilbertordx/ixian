@@ -143,7 +143,7 @@ fn render_briefing(f: &mut Frame, app: &mut App) {
     f.render_widget(
         Paragraph::new(Line::from(vec![
             Span::styled(
-                " SIETCH ",
+                " IXIAN ",
                 Style::new().bold().fg(SELECTED_INK).bg(BLUE),
             ),
             Span::styled("  briefing", Style::new().fg(DIM)),
@@ -286,7 +286,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
     f.render_widget(
         Paragraph::new(Line::from(vec![
             Span::styled(
-                " SIETCH ",
+                " IXIAN ",
                 Style::new().bold().fg(SELECTED_INK).bg(BLUE),
             ),
             Span::styled("  pick a project, press Enter, it opens", Style::new().fg(DIM)),
@@ -544,7 +544,7 @@ mod tests {
         let mut app = make_app();
         let s = screen(&mut app, 110, 32);
         for want in [
-            "SIETCH",
+            "IXIAN",
             "Projects",
             "Alpha App",
             "Beta Tool",
@@ -630,7 +630,7 @@ mod tests {
                 title: "Rust remaster".into(),
                 did: vec!["built the thing".into()],
                 left: vec!["test on windows".into()],
-                next: vec!["run sietch".into()],
+                next: vec!["run ixian".into()],
             }],
             true,
         );
@@ -641,7 +641,7 @@ mod tests {
             "Alpha App",
             "built the thing",
             "test on windows",
-            "run sietch",
+            "run ixian",
             "go to that project",
         ] {
             assert!(s.contains(want), "missing {want:?} in:\n{s}");
