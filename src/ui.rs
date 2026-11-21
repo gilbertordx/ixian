@@ -14,8 +14,8 @@ use crate::runner::Status;
 
 const SPINNER: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
-// Dune night palette: dark brown paper, sand text, spice-orange accents (24-bit colour).
-const PAPER: Color = Color::Rgb(21, 16, 11);
+// Dune night palette: black paper, sand text, spice-orange accents (24-bit colour).
+const PAPER: Color = Color::Rgb(0, 0, 0);
 const INK: Color = Color::Rgb(234, 217, 184);
 const BLUE: Color = Color::Rgb(106, 176, 224);
 const GREEN: Color = Color::Rgb(143, 191, 106);
@@ -24,8 +24,8 @@ const RED: Color = Color::Rgb(232, 98, 74);
 const DIM: Color = Color::Rgb(154, 132, 96);
 const TEXT: Color = INK;
 const SPICE: Color = Color::Rgb(240, 138, 43);
-const SEL_DIM: Color = Color::Rgb(42, 31, 21);
-const SELECTED_INK: Color = Color::Rgb(21, 16, 11);
+const SEL_DIM: Color = Color::Rgb(30, 24, 18);
+const SELECTED_INK: Color = Color::Rgb(0, 0, 0);
 const LINE: Color = Color::Rgb(74, 56, 38);
 
 fn kind_label(kind: Kind) -> &'static str {
