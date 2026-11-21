@@ -14,14 +14,18 @@ use crate::runner::Status;
 
 const SPINNER: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
-// A Kali-ish palette (24-bit colour; Windows Terminal and most terminals support it).
-const BLUE: Color = Color::Rgb(59, 142, 234);
-const GREEN: Color = Color::Rgb(63, 185, 80);
-const YELLOW: Color = Color::Rgb(227, 179, 65);
-const RED: Color = Color::Rgb(248, 81, 73);
-const DIM: Color = Color::Rgb(110, 118, 129);
-const TEXT: Color = Color::Rgb(201, 209, 217);
-const SEL_DIM: Color = Color::Rgb(33, 38, 45);
+// Dune "sand" palette: sand paper, dark-brown ink, spice-rust accents (24-bit colour).
+const PAPER: Color = Color::Rgb(236, 220, 185);
+const INK: Color = Color::Rgb(42, 27, 16);
+const BLUE: Color = Color::Rgb(29, 79, 122);
+const GREEN: Color = Color::Rgb(61, 107, 47);
+const YELLOW: Color = Color::Rgb(154, 106, 0);
+const RED: Color = Color::Rgb(168, 50, 31);
+const DIM: Color = Color::Rgb(122, 99, 71);
+const TEXT: Color = INK;
+const SPICE: Color = Color::Rgb(184, 71, 15);
+const SEL_DIM: Color = Color::Rgb(214, 194, 147);
+const SELECTED_INK: Color = Color::Rgb(248, 236, 210);
 
 fn kind_label(kind: Kind) -> &'static str {
     match kind {
@@ -107,7 +111,7 @@ fn hints() -> Line<'static> {
         }
         spans.push(Span::styled(
             (*k).to_string(),
-            Style::new().fg(BLUE).add_modifier(Modifier::BOLD),
+            Style::new().fg(SPICE).add_modifier(Modifier::BOLD),
         ));
         spans.push(Span::styled(format!(" {label}"), Style::new().fg(DIM)));
     }
@@ -119,6 +123,10 @@ fn hints() -> Line<'static> {
 }
 
 pub fn render(f: &mut Frame, app: &mut App) {
+    f.render_widget(
+        Block::new().style(Style::new().bg(PAPER).fg(INK)),
+        f.area(),
+    );
     let [header, body, log_area, footer] = Layout::vertical([
         Constraint::Length(1),
         Constraint::Min(8),
@@ -133,7 +141,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         Paragraph::new(Line::from(vec![
             Span::styled(
                 " SIETCH ",
-                Style::new().bold().fg(Color::Black).bg(BLUE),
+                Style::new().bold().fg(SELECTED_INK).bg(INK),
             ),
             Span::styled("  pick a project, press Enter, it opens", Style::new().fg(DIM)),
         ])),
@@ -162,23 +170,23 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let selected_style = |focused: bool| {
         if focused {
             Style::new()
-                .bg(BLUE)
-                .fg(Color::Black)
+                .bg(SPICE)
+                .fg(SELECTED_INK)
                 .add_modifier(Modifier::BOLD)
         } else {
-            Style::new().bg(SEL_DIM).fg(Color::White)
+            Style::new().bg(SEL_DIM).fg(INK)
         }
     };
     let border = |focused: bool| {
         if focused {
-            Style::new().fg(BLUE)
+            Style::new().fg(SPICE)
         } else {
-            Style::new().fg(SEL_DIM)
+            Style::new().fg(DIM)
         }
     };
     let title_style = |focused: bool| {
         if focused {
-            Style::new().fg(BLUE).add_modifier(Modifier::BOLD)
+            Style::new().fg(SPICE).add_modifier(Modifier::BOLD)
         } else {
             Style::new().fg(DIM)
         }
@@ -186,7 +194,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     // ---------------------------------------------------------------- projects
     let block = Block::bordered()
-        .border_type(BorderType::Rounded)
+        .border_type(BorderType::Plain)
         .title(Span::styled(" Projects ", title_style(focus_projects)))
         .border_style(border(focus_projects));
     app.areas.projects = block.inner(left);
@@ -224,7 +232,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     // ---------------------------------------------------------------- selected project
     let right_block = Block::bordered()
-        .border_type(BorderType::Rounded)
+        .border_type(BorderType::Plain)
         .title(Span::styled(" Actions ", title_style(!focus_projects)))
         .border_style(border(!focus_projects));
     let right_inner = right_block.inner(right);
@@ -246,7 +254,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         };
         f.render_widget(
             Paragraph::new(vec![
-                Line::from(project.name.clone().fg(BLUE).bold()),
+                Line::from(project.name.clone().fg(SPICE).bold()),
                 Line::from(project.description.clone().fg(DIM)),
                 folder_line,
             ]),
@@ -296,9 +304,9 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .map(|a| format!(" Output - {} ", a.name))
         .unwrap_or_else(|| " Output ".into());
     let log_block = Block::bordered()
-        .border_type(BorderType::Rounded)
+        .border_type(BorderType::Plain)
         .title(Span::styled(title, Style::new().fg(DIM)))
-        .border_style(Style::new().fg(SEL_DIM));
+        .border_style(Style::new().fg(DIM));
     let inner = log_block.inner(log_area);
     let lines: Vec<Line> = match app.states.get(&key).filter(|s| !s.log.is_empty()) {
         Some(st) => {
