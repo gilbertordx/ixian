@@ -12,6 +12,7 @@ use ratatui::layout::Rect;
 use ratatui::widgets::ListState;
 
 use crate::config::{Config, Kind};
+use crate::handoff::Entry;
 use crate::runner::{Key, Msg, Runner, Status};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -28,6 +29,13 @@ pub enum Effect {
     Terminal(Key),
     EditConfig,
     ReloadConfig,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Screen {
+    Menu,
+    /// The handoff briefing: one row per project that has notes.
+    Briefing,
 }
 
 #[derive(Default)]
@@ -57,6 +65,9 @@ pub struct App {
     pub tick: usize,
     pub areas: Areas,
     last_click: Option<(Instant, Focus, usize)>,
+    pub screen: Screen,
+    pub briefing: Vec<Entry>,
+    pub brief: ListState,
 }
 
 const LOG_LIMIT: usize = 500;
@@ -77,6 +88,79 @@ impl App {
             tick: 0,
             areas: Areas::default(),
             last_click: None,
+            screen: Screen::Menu,
+            briefing: Vec::new(),
+            brief: ListState::default().with_selected(Some(0)),
+        }
+    }
+
+    /// Load the briefing (newest note per project). A non-empty briefing is shown first.
+    pub fn set_briefing(&mut self, entries: Vec<Entry>, show: bool) {
+        self.brief.select(Some(0));
+        self.screen = if show && !entries.is_empty() {
+            Screen::Briefing
+        } else {
+            Screen::Menu
+        };
+        self.briefing = entries;
+    }
+
+    pub fn sel_brief(&self) -> usize {
+        self.brief
+            .selected()
+            .unwrap_or(0)
+            .min(self.briefing.len().saturating_sub(1))
+    }
+
+    fn request_quit(&mut self, was_armed: bool) {
+        let running = self.runner.running_count();
+        if running > 0 && !was_armed {
+            self.quit_armed = true;
+            self.flash(format!(
+                "{running} service(s) still running - press q again to stop them and quit"
+            ));
+        } else {
+            self.quit = true;
+        }
+    }
+
+    fn on_brief_key(&mut self, code: KeyCode, was_armed: bool) {
+        let n = self.briefing.len();
+        match code {
+            KeyCode::Char('q') => self.request_quit(was_armed),
+            KeyCode::Esc | KeyCode::Char('b') | KeyCode::Tab => self.screen = Screen::Menu,
+            KeyCode::Up | KeyCode::Char('k') => {
+                let i = self.sel_brief();
+                self.brief.select(Some(i.saturating_sub(1)));
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                let i = self.sel_brief();
+                self.brief.select(Some((i + 1).min(n.saturating_sub(1))));
+            }
+            KeyCode::Enter => {
+                let Some(entry) = self.briefing.get(self.sel_brief()) else {
+                    return;
+                };
+                let name = entry.project.to_lowercase();
+                let found = self
+                    .config
+                    .projects
+                    .iter()
+                    .position(|p| p.name.to_lowercase() == name);
+                match found {
+                    Some(i) => {
+                        self.projects.select(Some(i));
+                        self.actions.select(Some(0));
+                        self.focus = Focus::Projects;
+                        self.screen = Screen::Menu;
+                    }
+                    None => self.flash(format!(
+                        "no project called {:?} in your list - press Esc for the menu",
+                        entry.project
+                    )),
+                }
+            }
+            _ => {}
         }
     }
 
@@ -273,17 +357,18 @@ impl App {
             self.quit = true;
             return Effect::None;
         }
+        if self.screen == Screen::Briefing {
+            self.on_brief_key(key.code, was_armed);
+            return Effect::None;
+        }
         let count = self.config.projects.len();
         match key.code {
-            KeyCode::Char('q') | KeyCode::Esc => {
-                let running = self.runner.running_count();
-                if running > 0 && !was_armed {
-                    self.quit_armed = true;
-                    self.flash(format!(
-                        "{running} service(s) still running - press q again to stop them and quit"
-                    ));
+            KeyCode::Char('q') | KeyCode::Esc => self.request_quit(was_armed),
+            KeyCode::Char('b') => {
+                if self.briefing.is_empty() {
+                    self.flash("no handoff notes yet - sessions add them to HANDOFF.md");
                 } else {
-                    self.quit = true;
+                    self.screen = Screen::Briefing;
                 }
             }
             KeyCode::Up | KeyCode::Char('k') => self.move_selection(-1),
@@ -347,6 +432,9 @@ impl App {
 
     /// Click a row to select it; click it again (or double-click) to run it.
     pub fn on_mouse(&mut self, m: MouseEvent) -> Effect {
+        if self.screen == Screen::Briefing {
+            return Effect::None;
+        }
         match m.kind {
             MouseEventKind::ScrollUp => self.move_selection(-1),
             MouseEventKind::ScrollDown => self.move_selection(1),
@@ -438,6 +526,7 @@ mod tests {
     fn app() -> (App, mpsc::Receiver<Msg>) {
         let dir = std::env::temp_dir().display().to_string();
         let cfg = Config {
+            handoff: None,
             projects: vec![
                 Project {
                     name: "Alpha".into(),
@@ -673,5 +762,62 @@ mod tests {
         );
         a.on_msg(Msg::Status((0, 0), Status::Running(None)));
         assert!(a.project_active(0) && !a.project_active(1));
+    }
+
+    fn note(project: &str, next: &str) -> Entry {
+        Entry {
+            when: "2026-11-21 10:00".into(),
+            project: project.into(),
+            title: "t".into(),
+            did: vec!["d".into()],
+            left: vec![],
+            next: vec![next.into()],
+        }
+    }
+
+    #[test]
+    fn a_briefing_opens_first_and_enter_jumps_to_that_project() {
+        let (mut a, _rx) = app();
+        a.set_briefing(vec![note("beta", "do it"), note("Alpha", "x")], true);
+        assert_eq!(a.screen, Screen::Briefing);
+        a.on_key(key(KeyCode::Enter)); // first row is "beta" (matches case-insensitively)
+        assert_eq!(a.screen, Screen::Menu);
+        assert_eq!(a.sel_project(), 1);
+    }
+
+    #[test]
+    fn briefing_keys_move_leave_and_quit() {
+        let (mut a, _rx) = app();
+        a.set_briefing(vec![note("Alpha", "x"), note("beta", "y")], true);
+        a.on_key(key(KeyCode::Down));
+        assert_eq!(a.sel_brief(), 1);
+        a.on_key(key(KeyCode::Down));
+        assert_eq!(a.sel_brief(), 1, "stops at the last row");
+        a.on_key(key(KeyCode::Esc));
+        assert_eq!(a.screen, Screen::Menu);
+        assert!(!a.quit, "Esc leaves the briefing, it does not quit");
+        a.on_key(key(KeyCode::Char('b')));
+        assert_eq!(a.screen, Screen::Briefing);
+        a.on_key(key(KeyCode::Char('q')));
+        assert!(a.quit);
+    }
+
+    #[test]
+    fn an_unknown_project_in_a_note_is_explained_not_followed() {
+        let (mut a, _rx) = app();
+        a.set_briefing(vec![note("nowhere", "x")], true);
+        a.on_key(key(KeyCode::Enter));
+        assert_eq!(a.screen, Screen::Briefing);
+        assert!(a.flash.is_some());
+    }
+
+    #[test]
+    fn no_notes_means_no_briefing() {
+        let (mut a, _rx) = app();
+        a.set_briefing(vec![], true);
+        assert_eq!(a.screen, Screen::Menu);
+        a.on_key(key(KeyCode::Char('b')));
+        assert_eq!(a.screen, Screen::Menu);
+        assert!(a.flash.is_some());
     }
 }

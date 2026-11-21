@@ -8,7 +8,7 @@ use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, List, ListItem, Paragraph};
 
-use crate::app::{App, Focus};
+use crate::app::{App, Focus, Screen};
 use crate::config::Kind;
 use crate::runner::Status;
 
@@ -105,6 +105,7 @@ fn hints() -> Line<'static> {
         ("1-9", "run"),
         ("s", "stop"),
         ("o", "open again"),
+        ("b", "briefing"),
         ("e", "edit list"),
         ("q", "quit"),
     ];
@@ -126,7 +127,148 @@ fn hints() -> Line<'static> {
     Line::from(spans)
 }
 
+/// The handoff briefing: what each project's last session did, what is left, and what is next.
+fn render_briefing(f: &mut Frame, app: &mut App) {
+    f.render_widget(
+        Block::new().style(Style::new().bg(PAPER).fg(INK)),
+        f.area(),
+    );
+    let [header, intro, body, footer] = Layout::vertical([
+        Constraint::Length(1),
+        Constraint::Length(3),
+        Constraint::Min(6),
+        Constraint::Length(1),
+    ])
+    .areas(f.area());
+    f.render_widget(
+        Paragraph::new(Line::from(vec![
+            Span::styled(
+                " SIETCH ",
+                Style::new().bold().fg(SELECTED_INK).bg(BLUE),
+            ),
+            Span::styled("  briefing", Style::new().fg(DIM)),
+        ])),
+        header,
+    );
+    let n = app.briefing.len();
+    let first = app.briefing.first();
+    let mut intro_lines = vec![Line::from(vec![
+        Span::styled(" Welcome back. ", Style::new().fg(INK).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            format!("{n} project{} left notes.", if n == 1 { "" } else { "s" }),
+            Style::new().fg(DIM),
+        ),
+    ])];
+    if let Some(e) = first {
+        let next = e.next.first().map(String::as_str).unwrap_or("(no next step written)");
+        intro_lines.push(Line::from(vec![
+            Span::styled(" Most recent: ", Style::new().fg(DIM)),
+            Span::styled(e.project.clone(), Style::new().fg(YELLOW).add_modifier(Modifier::BOLD)),
+            Span::styled("  →  ", Style::new().fg(DIM)),
+            Span::styled(next.to_string(), Style::new().fg(CYAN)),
+        ]));
+    }
+    f.render_widget(Paragraph::new(intro_lines), intro);
+
+    let [left, right] =
+        Layout::horizontal([Constraint::Percentage(34), Constraint::Percentage(66)]).areas(body);
+    let block = Block::bordered()
+        .style(Style::new().bg(PANEL))
+        .border_type(BorderType::Plain)
+        .title(Span::styled(" Workers ", Style::new().fg(BLUE).add_modifier(Modifier::BOLD)))
+        .border_style(Style::new().fg(BLUE));
+    let items: Vec<ListItem> = app
+        .briefing
+        .iter()
+        .map(|e| {
+            let known = app
+                .config
+                .projects
+                .iter()
+                .any(|p| p.name.to_lowercase() == e.project.to_lowercase());
+            ListItem::new(Line::from(vec![
+                Span::styled(e.project.clone(), Style::new().fg(TEXT)),
+                if known { Span::raw("") } else { " ⚠".fg(YELLOW) },
+                Span::styled(format!("  {}", e.when), Style::new().fg(DIM)),
+            ]))
+        })
+        .collect();
+    f.render_stateful_widget(
+        List::new(items)
+            .block(block)
+            .highlight_style(
+                Style::new()
+                    .bg(BLUE)
+                    .fg(SELECTED_INK)
+                    .add_modifier(Modifier::BOLD),
+            )
+            .highlight_symbol("▶ "),
+        left,
+        &mut app.brief,
+    );
+
+    let detail_block = Block::bordered()
+        .style(Style::new().bg(PANEL))
+        .border_type(BorderType::Plain)
+        .title(Span::styled(" Notes ", Style::new().fg(DIM)))
+        .border_style(Style::new().fg(LINE));
+    let mut lines: Vec<Line> = Vec::new();
+    if let Some(e) = app.briefing.get(app.sel_brief()) {
+        lines.push(Line::from(e.project.clone().fg(YELLOW).bold()));
+        if !e.title.is_empty() {
+            lines.push(Line::from(e.title.clone().fg(DIM)));
+        }
+        lines.push(Line::from(e.when.clone().fg(DIM)));
+        let mut section = |name: &str, color: Color, items: &[String]| {
+            lines.push(Line::from(""));
+            lines.push(Line::from(Span::styled(
+                name.to_string(),
+                Style::new().fg(color).add_modifier(Modifier::BOLD),
+            )));
+            if items.is_empty() {
+                lines.push(Line::from("  -".fg(DIM)));
+            }
+            for it in items {
+                lines.push(Line::from(vec![
+                    Span::styled("  • ", Style::new().fg(color)),
+                    Span::styled(it.clone(), Style::new().fg(TEXT)),
+                ]));
+            }
+        };
+        section("Did", DIM, &e.did);
+        section("Left", YELLOW, &e.left);
+        section("Next", CYAN, &e.next);
+    }
+    f.render_widget(
+        Paragraph::new(lines)
+            .block(detail_block)
+            .wrap(ratatui::widgets::Wrap { trim: false }),
+        right,
+    );
+
+    let footer_line = match &app.flash {
+        Some((text, at)) if at.elapsed() < Duration::from_secs(5) => {
+            Line::from(format!(" {text}").fg(YELLOW))
+        }
+        _ => Line::from(vec![
+            Span::styled(" ↑↓", Style::new().fg(BLUE).add_modifier(Modifier::BOLD)),
+            Span::styled(" move   ", Style::new().fg(DIM)),
+            Span::styled("Enter", Style::new().fg(BLUE).add_modifier(Modifier::BOLD)),
+            Span::styled(" go to that project   ", Style::new().fg(DIM)),
+            Span::styled("Esc", Style::new().fg(BLUE).add_modifier(Modifier::BOLD)),
+            Span::styled(" menu   ", Style::new().fg(DIM)),
+            Span::styled("q", Style::new().fg(BLUE).add_modifier(Modifier::BOLD)),
+            Span::styled(" quit", Style::new().fg(DIM)),
+        ]),
+    };
+    f.render_widget(Paragraph::new(footer_line), footer);
+}
+
 pub fn render(f: &mut Frame, app: &mut App) {
+    if app.screen == Screen::Briefing {
+        render_briefing(f, app);
+        return;
+    }
     f.render_widget(
         Block::new().style(Style::new().bg(PAPER).fg(INK)),
         f.area(),
@@ -360,6 +502,7 @@ mod tests {
             stop_services: false,
         };
         let cfg = Config {
+            handoff: None,
             projects: vec![
                 Project {
                     name: "Alpha App".into(),
@@ -474,5 +617,34 @@ mod tests {
         screen(&mut app, 110, 32);
         assert!(app.areas.projects.width > 0 && app.areas.actions.width > 0);
         assert!(app.areas.actions.x > app.areas.projects.x);
+    }
+
+    #[test]
+    fn the_briefing_shows_workers_and_the_next_step() {
+        use crate::handoff::Entry;
+        let mut app = make_app();
+        app.set_briefing(
+            vec![Entry {
+                when: "2026-11-21 10:00".into(),
+                project: "Alpha App".into(),
+                title: "Rust remaster".into(),
+                did: vec!["built the thing".into()],
+                left: vec!["test on windows".into()],
+                next: vec!["run sietch".into()],
+            }],
+            true,
+        );
+        let s = screen(&mut app, 110, 30);
+        for want in [
+            "Welcome back",
+            "1 project left notes",
+            "Alpha App",
+            "built the thing",
+            "test on windows",
+            "run sietch",
+            "go to that project",
+        ] {
+            assert!(s.contains(want), "missing {want:?} in:\n{s}");
+        }
     }
 }

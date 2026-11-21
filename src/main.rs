@@ -5,6 +5,7 @@
 
 mod app;
 mod config;
+mod handoff;
 mod runner;
 mod ui;
 
@@ -42,6 +43,9 @@ struct Cli {
     /// Replace the project list with the current defaults (your old one is saved as projects.toml.bak).
     #[arg(long)]
     reset_config: bool,
+    /// Do not `git pull` the handoff notes or open the briefing at start.
+    #[arg(long)]
+    no_briefing: bool,
     /// Print the path of the project list and exit.
     #[arg(long)]
     print_config_path: bool,
@@ -109,6 +113,21 @@ fn load_config(path: &Path) -> Result<Config> {
     config::load(path)
 }
 
+/// Read the handoff notes (after a quick `git pull` of the notes repo) into the briefing.
+fn load_briefing(app: &mut App, pull: bool, show: bool) {
+    let Some(file) = app.config.handoff_path() else {
+        return;
+    };
+    if pull && let Some(dir) = file.parent().filter(|d| d.join(".git").exists()) {
+        println!("Syncing handoff notes...");
+        if let Err(e) = handoff::pull(dir, Duration::from_secs(6)) {
+            app.flash(format!("handoff notes not updated ({e}); showing the saved copy"));
+        }
+    }
+    let entries = handoff::latest_per_project(&handoff::load(&file));
+    app.set_briefing(entries, show);
+}
+
 fn run_menu(mut app: App, rx: mpsc::Receiver<runner::Msg>) -> Result<()> {
     let mut terminal = enter_terminal()?;
     let result = (|| -> Result<()> {
@@ -143,6 +162,7 @@ fn run_menu(mut app: App, rx: mpsc::Receiver<runner::Msg>) -> Result<()> {
                 Effect::ReloadConfig => match load_config(&app.config_path) {
                     Ok(cfg) => {
                         app.config = cfg;
+                        load_briefing(&mut app, false, false);
                         app.projects.select(Some(0));
                         app.actions.select(Some(0));
                         app.flash("project list reloaded");
@@ -205,6 +225,15 @@ fn main() -> Result<()> {
                 }
             }
         }
+        match cfg.handoff_path() {
+            Some(f) if f.exists() => println!(
+                "  ✔ handoff notes  {}   ({} entries)",
+                f.display(),
+                handoff::load(&f).len()
+            ),
+            Some(f) => println!("  ✖ handoff notes  file not found: {}", f.display()),
+            None => println!("  - handoff notes  not set up (see [handoff] in the project list)"),
+        }
         if missing > 0 {
             println!("\nEdit the file above and set `dir` for the projects marked ✖.");
         }
@@ -222,6 +251,9 @@ fn main() -> Result<()> {
             "first run: created {} - set each project's folder with e",
             path.display()
         ));
+    }
+    if !cli.no_briefing {
+        load_briefing(&mut app, true, true);
     }
     run_menu(app, rx)
 }

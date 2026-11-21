@@ -30,6 +30,23 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     #[serde(default)]
     pub projects: Vec<Project>,
+    /// Where the session handoff notes live (see `handoff.rs`).
+    #[serde(default)]
+    pub handoff: Option<Handoff>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
+pub struct Handoff {
+    #[serde(default)]
+    pub file: String,
+}
+
+impl Config {
+    /// The handoff file, if one is configured and `~` expanded.
+    pub fn handoff_path(&self) -> Option<PathBuf> {
+        let file = self.handoff.as_ref()?.file.trim();
+        (!file.is_empty()).then(|| expand_home(file))
+    }
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
@@ -193,6 +210,10 @@ pub fn default_config_text(discover: &dyn Fn(&str) -> Option<PathBuf>) -> String
         r#"# Sietch - your projects. Edit this file; press r in Sietch to reload it.
 # Folders left empty (dir = '') were not found: set them to where the project lives.
 # Kinds: service (keeps running, opens `url`), task (runs and finishes), terminal (interactive), open.
+
+# Session handoff notes: Sietch shows them as a briefing when it starts (press b to see them again).
+[handoff]
+file = {handoff}
 
 [[projects]]
 name = "tbjp-oracle"
@@ -359,6 +380,10 @@ dir = {sietch}
   kind = "open"
   run = "."
 "#,
+        handoff = lit(&{
+            let d = dir("handoff");
+            if d.is_empty() { d } else { format!("{d}{}HANDOFF.md", std::path::MAIN_SEPARATOR) }
+        }),
         tbjp = lit(&dir("tbjp-oracle")),
         logbook = lit(&dir("logbook")),
         rhcp = lit(&dir("rhcp-chatbot")),
@@ -418,6 +443,8 @@ mod tests {
             cfg.projects.iter().all(|p| p.dir.is_empty()),
             "nothing was discovered, so dirs are empty"
         );
+        assert!(cfg.handoff.is_some(), "the default list has a [handoff] section");
+        assert_eq!(cfg.handoff_path(), None, "empty until a handoff folder is found");
         let web = &cfg.projects[0].actions[0];
         assert_eq!(web.kind, Kind::Service);
         assert_eq!(web.url.as_deref(), Some("http://127.0.0.1:8501"));
