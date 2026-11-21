@@ -379,6 +379,60 @@ dir = {sietch}
   name = "Open the project folder"
   kind = "open"
   run = "."
+
+[[projects]]
+name = "ai-memory"
+description = "Long-term memory and handoffs for AI coding agents (akitaonrails/ai-memory)"
+dir = '~'
+
+  [[projects.actions]]
+  name = "Chat with memory (Claude Code)"
+  kind = "terminal"
+  run = "ai-memory run claude"
+
+  [[projects.actions]]
+  name = "Recent memories"
+  run = "ai-memory recent"
+
+  [[projects.actions]]
+  name = "Status"
+  run = "ai-memory status"
+
+  [[projects.actions]]
+  name = "Health check"
+  run = "ai-memory doctor"
+
+  [[projects.actions]]
+  name = "Install with Scoop"
+  run = "scoop bucket add akitaonrails https://github.com/akitaonrails/scoop-bucket && scoop install ai-memory"
+
+  [[projects.actions]]
+  name = "Read the README"
+  kind = "open"
+  run = "https://github.com/akitaonrails/ai-memory"
+
+[[projects]]
+name = "ai-usagebar"
+description = "Plan quotas and reset times for your AI tools (akitaonrails/ai-usagebar)"
+dir = '~'
+
+  [[projects.actions]]
+  name = "Usage (terminal UI)"
+  kind = "terminal"
+  run = "ai-usagebar-tui"
+
+  [[projects.actions]]
+  name = "Usage report"
+  run = "ai-usagebar --pretty"
+
+  [[projects.actions]]
+  name = "Install with Scoop"
+  run = "scoop bucket add akitaonrails https://github.com/akitaonrails/scoop-bucket && scoop install ai-usagebar"
+
+  [[projects.actions]]
+  name = "Read the README"
+  kind = "open"
+  run = "https://github.com/akitaonrails/ai-usagebar"
 "#,
         handoff = lit(&{
             let d = dir("handoff");
@@ -438,9 +492,9 @@ mod tests {
         let text = default_config_text(&|_| None);
         let cfg: Config = toml::from_str(&text).expect("default config parses");
         let names: Vec<&str> = cfg.projects.iter().map(|p| p.name.as_str()).collect();
-        assert_eq!(names, ["tbjp-oracle", "logbook", "rhcp-chatbot", "gilbertordx.github.io", "sietch"]);
+        assert_eq!(names, ["tbjp-oracle", "logbook", "rhcp-chatbot", "gilbertordx.github.io", "sietch", "ai-memory", "ai-usagebar"]);
         assert!(
-            cfg.projects.iter().all(|p| p.dir.is_empty()),
+            cfg.projects.iter().filter(|p| p.dir != "~").all(|p| p.dir.is_empty()),
             "nothing was discovered, so dirs are empty"
         );
         assert!(cfg.handoff.is_some(), "the default list has a [handoff] section");
