@@ -14,18 +14,19 @@ use crate::runner::Status;
 
 const SPINNER: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
-// Dune "sand" palette: sand paper, dark-brown ink, spice-rust accents (24-bit colour).
-const PAPER: Color = Color::Rgb(236, 220, 185);
-const INK: Color = Color::Rgb(42, 27, 16);
-const BLUE: Color = Color::Rgb(29, 79, 122);
-const GREEN: Color = Color::Rgb(61, 107, 47);
-const YELLOW: Color = Color::Rgb(154, 106, 0);
-const RED: Color = Color::Rgb(168, 50, 31);
-const DIM: Color = Color::Rgb(122, 99, 71);
+// Dune night palette: dark brown paper, sand text, spice-orange accents (24-bit colour).
+const PAPER: Color = Color::Rgb(21, 16, 11);
+const INK: Color = Color::Rgb(234, 217, 184);
+const BLUE: Color = Color::Rgb(106, 176, 224);
+const GREEN: Color = Color::Rgb(143, 191, 106);
+const YELLOW: Color = Color::Rgb(224, 168, 60);
+const RED: Color = Color::Rgb(232, 98, 74);
+const DIM: Color = Color::Rgb(154, 132, 96);
 const TEXT: Color = INK;
-const SPICE: Color = Color::Rgb(184, 71, 15);
-const SEL_DIM: Color = Color::Rgb(214, 194, 147);
-const SELECTED_INK: Color = Color::Rgb(248, 236, 210);
+const SPICE: Color = Color::Rgb(240, 138, 43);
+const SEL_DIM: Color = Color::Rgb(42, 31, 21);
+const SELECTED_INK: Color = Color::Rgb(21, 16, 11);
+const LINE: Color = Color::Rgb(74, 56, 38);
 
 fn kind_label(kind: Kind) -> &'static str {
     match kind {
@@ -181,7 +182,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         if focused {
             Style::new().fg(SPICE)
         } else {
-            Style::new().fg(DIM)
+            Style::new().fg(LINE)
         }
     };
     let title_style = |focused: bool| {
@@ -306,7 +307,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
     let log_block = Block::bordered()
         .border_type(BorderType::Plain)
         .title(Span::styled(title, Style::new().fg(DIM)))
-        .border_style(Style::new().fg(DIM));
+        .border_style(Style::new().fg(LINE));
     let inner = log_block.inner(log_area);
     let lines: Vec<Line> = match app.states.get(&key).filter(|s| !s.log.is_empty()) {
         Some(st) => {
