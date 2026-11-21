@@ -132,7 +132,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
     f.render_widget(
         Paragraph::new(Line::from(vec![
             Span::styled(
-                " LAUNCHPAD ",
+                " SIETCH ",
                 Style::new().bold().fg(Color::Black).bg(BLUE),
             ),
             Span::styled("  pick a project, press Enter, it opens", Style::new().fg(DIM)),
@@ -386,7 +386,7 @@ mod tests {
         let mut app = make_app();
         let s = screen(&mut app, 110, 32);
         for want in [
-            "LAUNCHPAD",
+            "SIETCH",
             "Projects",
             "Alpha App",
             "Beta Tool",

@@ -117,10 +117,17 @@ impl Project {
 
 /// Where the config file lives: `--config`, else the platform's config folder.
 pub fn default_config_path() -> PathBuf {
-    dirs::config_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("launchpad")
-        .join("projects.toml")
+    let base = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
+    let path = base.join("sietch").join("projects.toml");
+    // This tool used to be called "launchpad": carry the old project list over once.
+    let legacy = base.join("launchpad").join("projects.toml");
+    if !path.exists() && legacy.exists() {
+        if let Some(dir) = path.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        let _ = std::fs::copy(&legacy, &path);
+    }
+    path
 }
 
 pub fn load(path: &Path) -> Result<Config> {
@@ -183,7 +190,7 @@ pub fn default_config_text(discover: &dyn Fn(&str) -> Option<PathBuf>) -> String
     };
     let cargo = "cargo run --release --manifest-path rust/Cargo.toml --";
     format!(
-        r#"# Launchpad - your projects. Edit this file; press r in Launchpad to reload it.
+        r#"# Sietch - your projects. Edit this file; press r in Sietch to reload it.
 # Folders left empty (dir = '') were not found: set them to where the project lives.
 # Kinds: service (keeps running, opens `url`), task (runs and finishes), terminal (interactive), open.
 
@@ -330,12 +337,12 @@ dir = {portfolio}
   run = "https://gilbertordx.github.io"
 
 [[projects]]
-name = "launchpad"
+name = "sietch"
 description = "This menu (Rust terminal app)"
-dir = {launchpad}
+dir = {sietch}
 
   [[projects.actions]]
-  name = "Update Launchpad + desktop icon"
+  name = "Update Sietch + desktop icon"
   run = "{update}"
 
   [[projects.actions]]
@@ -356,7 +363,10 @@ dir = {launchpad}
         logbook = lit(&dir("logbook")),
         rhcp = lit(&dir("rhcp-chatbot")),
         portfolio = lit(&dir("gilbertordx.github.io")),
-        launchpad = lit(&dir("launchpad")),
+        sietch = lit(&{
+            let d = dir("sietch");
+            if d.is_empty() { dir("launchpad") } else { d }
+        }),
         trunk = if cfg!(windows) { "~/.cargo/bin/trunk.exe" } else { "~/.cargo/bin/trunk" },
         update = if cfg!(windows) {
             "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update.ps1"
@@ -403,7 +413,7 @@ mod tests {
         let text = default_config_text(&|_| None);
         let cfg: Config = toml::from_str(&text).expect("default config parses");
         let names: Vec<&str> = cfg.projects.iter().map(|p| p.name.as_str()).collect();
-        assert_eq!(names, ["tbjp-oracle", "logbook", "rhcp-chatbot", "gilbertordx.github.io", "launchpad"]);
+        assert_eq!(names, ["tbjp-oracle", "logbook", "rhcp-chatbot", "gilbertordx.github.io", "sietch"]);
         assert!(
             cfg.projects.iter().all(|p| p.dir.is_empty()),
             "nothing was discovered, so dirs are empty"
@@ -459,7 +469,7 @@ mod tests {
 
     #[test]
     fn discovery_finds_a_folder_in_an_extra_root() {
-        let root = std::env::temp_dir().join(format!("launchpad-disc-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("sietch-disc-{}", std::process::id()));
         std::fs::create_dir_all(root.join("my-project")).unwrap();
         assert_eq!(
             discover_dir("my-project", std::slice::from_ref(&root)),
@@ -474,7 +484,7 @@ mod tests {
 
     #[test]
     fn a_bad_config_gives_a_helpful_error() {
-        let p = std::env::temp_dir().join(format!("launchpad-bad-{}.toml", std::process::id()));
+        let p = std::env::temp_dir().join(format!("sietch-bad-{}.toml", std::process::id()));
         std::fs::write(&p, "[[projects]\nname=").unwrap();
         let err = load(&p).unwrap_err().to_string();
         assert!(err.contains("not valid"), "{err}");
@@ -483,7 +493,7 @@ mod tests {
 
     #[test]
     fn ensure_config_never_overwrites() {
-        let dir = std::env::temp_dir().join(format!("launchpad-ensure-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("sietch-ensure-{}", std::process::id()));
         let p = dir.join("projects.toml");
         assert!(ensure_config(&p).unwrap());
         std::fs::write(&p, "# mine\n").unwrap();

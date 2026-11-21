@@ -1,14 +1,14 @@
-"""End-to-end test: run the real `launchpad` binary inside a pseudo-terminal, press keys and click
+"""End-to-end test: run the real `sietch` binary inside a pseudo-terminal, press keys and click
 the mouse like a person, and check the rendered screen plus the real processes.
 
-usage: python tests/e2e_pty.py <path-to-launchpad-binary>        (needs: pip install pyte)
+usage: python tests/e2e_pty.py <path-to-sietch-binary>        (needs: pip install pyte)
 """
 import fcntl, os, pty, re, select, signal, socket, struct, subprocess, sys, tempfile, termios, time, urllib.request
 import pyte
 
 BIN = os.path.abspath(sys.argv[1])
 ROWS, COLS = 38, 130
-work = tempfile.mkdtemp(prefix="launchpad-e2e-")
+work = tempfile.mkdtemp(prefix="sietch-e2e-")
 with socket.socket() as s:
     s.bind(("127.0.0.1", 0)); PORT = s.getsockname()[1]
 URL = f"http://127.0.0.1:{PORT}"
@@ -101,7 +101,7 @@ def check(name, ok, detail=""):
     if not ok: print("\n".join("        | " + l.rstrip() for l in screen.display if l.strip()))
 
 try:
-    check("starts and shows the title, projects and hints", wait_for("LAUNCHPAD") and wait_for("Enter run") and all(t in text() for t in ["Demo Web", "Second", "NoFolder", "↑↓ move", "Enter run"]))
+    check("starts and shows the title, projects and hints", wait_for("SIETCH") and wait_for("Enter run") and all(t in text() for t in ["Demo Web", "Second", "NoFolder", "↑↓ move", "Enter run"]))
     check("the first project's actions are listed with numbers", all(t in text() for t in ["1 Serve", "2 Say hi", "3 Fail", "4 Chat", "5 Open folder", "a demo web app"]))
     check("a missing folder is flagged in the list", "NoFolder ⚠" in text())
 
@@ -148,7 +148,7 @@ try:
     check("you can type into it", wait_for("got:hello"))
     check("and it waits for Enter before returning", wait_for("Press Enter to go back"))
     send(b"\r")
-    check("the menu comes back afterwards", wait_for("LAUNCHPAD") and "Demo Web" in text())
+    check("the menu comes back afterwards", wait_for("SIETCH") and "Demo Web" in text())
 
     # ---- stopping
     send(KEY["left"]); pump(0.5)      # project list focused: s stops everything of the project

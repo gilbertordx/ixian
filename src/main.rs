@@ -1,4 +1,4 @@
-//! Launchpad - a terminal menu for opening your projects.
+//! Sietch - a terminal menu for opening your projects.
 //!
 //! Pick a project with the arrow keys (or the mouse), press Enter, and it starts and opens in
 //! your browser. See `config.rs` for the `projects.toml` format.
@@ -25,7 +25,7 @@ use runner::{Key, Runner, shell, step_needed};
 
 #[derive(Parser)]
 #[command(
-    name = "launchpad",
+    name = "sietch",
     version,
     about = "A terminal menu to open and test your projects"
 )]
@@ -99,7 +99,7 @@ fn run_in_terminal(app: &App, key: Key) {
             Err(e) => println!("\nCould not start: {e}"),
         }
     }
-    print!("\nPress Enter to go back to Launchpad... ");
+    print!("\nPress Enter to go back to Sietch... ");
     let _ = io::stdout().flush();
     let mut line = String::new();
     let _ = io::stdin().read_line(&mut line);
@@ -212,7 +212,7 @@ fn main() -> Result<()> {
     }
 
     // Ctrl+C belongs to whatever is in front: in the menu it is a key press, and while an
-    // interactive action runs it should stop that action, not Launchpad.
+    // interactive action runs it should stop that action, not Sietch.
     let _ = ctrlc::set_handler(|| {});
 
     let (tx, rx) = mpsc::channel();
