@@ -14,19 +14,22 @@ use crate::runner::Status;
 
 const SPINNER: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
-// Dune night palette: black paper, sand text, spice-orange accents (24-bit colour).
-const PAPER: Color = Color::Rgb(0, 0, 0);
-const INK: Color = Color::Rgb(234, 217, 184);
-const BLUE: Color = Color::Rgb(106, 176, 224);
-const GREEN: Color = Color::Rgb(143, 191, 106);
-const YELLOW: Color = Color::Rgb(224, 168, 60);
-const RED: Color = Color::Rgb(232, 98, 74);
-const DIM: Color = Color::Rgb(154, 132, 96);
+// The same palette as gilbertordx.github.io: near-black blue, grey text, Kali blue, with
+// yellow and cyan used sparingly (24-bit colour).
+const PAPER: Color = Color::Rgb(13, 17, 23);
+const PANEL: Color = Color::Rgb(18, 23, 31);
+const INK: Color = Color::Rgb(213, 219, 229);
+const DIM: Color = Color::Rgb(127, 138, 156);
+const LINE: Color = Color::Rgb(35, 43, 56);
+const BLUE: Color = Color::Rgb(54, 123, 240);
+const YELLOW: Color = Color::Rgb(252, 238, 10);
+const CYAN: Color = Color::Rgb(0, 229, 255);
+const GREEN: Color = CYAN;
+const RED: Color = Color::Rgb(255, 92, 87);
 const TEXT: Color = INK;
-const SPICE: Color = Color::Rgb(240, 138, 43);
-const SEL_DIM: Color = Color::Rgb(30, 24, 18);
-const SELECTED_INK: Color = Color::Rgb(0, 0, 0);
-const LINE: Color = Color::Rgb(74, 56, 38);
+const SPICE: Color = BLUE;
+const SEL_DIM: Color = Color::Rgb(26, 33, 48);
+const SELECTED_INK: Color = Color::Rgb(255, 255, 255);
 
 fn kind_label(kind: Kind) -> &'static str {
     match kind {
@@ -75,7 +78,7 @@ fn status_span(status: Option<&Status>, tick: usize) -> Span<'static> {
 fn log_line(text: &str) -> Line<'static> {
     let lower = text.to_lowercase();
     let style = if text.starts_with("$ ") {
-        Style::new().fg(BLUE).add_modifier(Modifier::BOLD)
+        Style::new().fg(CYAN).add_modifier(Modifier::BOLD)
     } else if lower.starts_with("error") || lower.contains("error:") || lower.contains("panicked") {
         Style::new().fg(RED)
     } else if lower.contains("warning") {
@@ -142,7 +145,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         Paragraph::new(Line::from(vec![
             Span::styled(
                 " SIETCH ",
-                Style::new().bold().fg(SELECTED_INK).bg(INK),
+                Style::new().bold().fg(SELECTED_INK).bg(BLUE),
             ),
             Span::styled("  pick a project, press Enter, it opens", Style::new().fg(DIM)),
         ])),
@@ -195,6 +198,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     // ---------------------------------------------------------------- projects
     let block = Block::bordered()
+        .style(Style::new().bg(PANEL))
         .border_type(BorderType::Plain)
         .title(Span::styled(" Projects ", title_style(focus_projects)))
         .border_style(border(focus_projects));
@@ -233,6 +237,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
 
     // ---------------------------------------------------------------- selected project
     let right_block = Block::bordered()
+        .style(Style::new().bg(PANEL))
         .border_type(BorderType::Plain)
         .title(Span::styled(" Actions ", title_style(!focus_projects)))
         .border_style(border(!focus_projects));
@@ -255,7 +260,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         };
         f.render_widget(
             Paragraph::new(vec![
-                Line::from(project.name.clone().fg(SPICE).bold()),
+                Line::from(project.name.clone().fg(YELLOW).bold()),
                 Line::from(project.description.clone().fg(DIM)),
                 folder_line,
             ]),
@@ -305,6 +310,7 @@ pub fn render(f: &mut Frame, app: &mut App) {
         .map(|a| format!(" Output - {} ", a.name))
         .unwrap_or_else(|| " Output ".into());
     let log_block = Block::bordered()
+        .style(Style::new().bg(PANEL))
         .border_type(BorderType::Plain)
         .title(Span::styled(title, Style::new().fg(DIM)))
         .border_style(Style::new().fg(LINE));
